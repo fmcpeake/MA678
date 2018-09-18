@@ -1,0 +1,232 @@
+---
+title: "MA678 homework 01"
+author: "Fionuala McPeake"
+date: "Septemeber 6, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+\newcommand{\mat}[1]{\boldsymbol{#1}} 
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\rv}[1]{\underline{#1}} 
+
+```{r setup, include=FALSE}
+pacman::p_load(ggplot2, knitr, arm, data.table,Cairo)
+knitr::opts_chunk$set(echo = TRUE,dev="CairoPNG",fig.align = "center", 
+                      fig.width = 5.656, fig.height = 4, global.par = TRUE)
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+```
+
+# Introduction 
+
+For homework 1 you will fit linear regression models and interpret them. You are welcome to transform the variables as needed.  How to use `lm` should have been covered in your discussion session.  Some of the code are written for you.  Please remove `eval=FALSE` inside the knitr chunk options for the code to run.
+
+This is not intended to be easy so please come see us to get help.
+
+## Data analysis 
+
+### Pyth!
+
+```{r}
+gelman_example_dir<-"http://www.stat.columbia.edu/~gelman/arm/examples/"
+pyth <- read.table (paste0(gelman_example_dir,"pyth/exercise2.1.dat"),
+                    header=T, sep=" ")
+```
+
+The folder pyth contains outcome `y` and inputs `x1`, `x2` for 40 data points, with a further 20 points with the inputs but no observed outcome. Save the file to your working directory and read it into R using the `read.table()` function.
+
+1. Use R to fit a linear regression model predicting `y` from `x1`,`x2`, using the first 40 data points in the file. Summarize the inferences and check the fit of your model.
+```{r}
+pyth40 <- pyth[1:40, ]
+reg<-(lm(y~ x1 + x2, data=pyth[1:40, ]))
+summary(reg)
+pyth.reg <- resid(reg)
+library(car)
+mmps(reg)
+
+```
+
+2. Display the estimated model graphically as in (GH) Figure 3.2.
+```{r}
+ggplot(reg)+aes(x=x1+x2, y=y)+geom_point(alpha=0.3)+ylab("Output")+xlab("X1 and X2")+geom_smooth(method="lm", se=FALSE, color='black')
+
+```
+
+3. Make a residual plot for this model. Do the assumptions appear to be met?
+
+Yes, the assumptions appear to be met as the residual points are not clustered or have a particularly strong pattern. 
+```{r}
+pyth40 <- pyth[1:40, ]
+pyth.reg <- resid(reg)
+df <- data.frame(pyth40$x1 + pyth40$x2, pyth.reg)
+df
+ggplot(df) +aes(x=pyth40$x1+pyth40$x2, y=pyth.reg) +geom_point(alpha=0.3) +ylab("Resiuals") +xlab("X1 and X2")
+#reg.resid <- resid(reg) #Tried it a second way, got the same results
+#plot(pyth40$y, reg.resid, ylab="Residuals", xlab="Original Output")
+```
+
+4. Make predictions for the remaining 20 data points in the file. How confident do you feel about these predictions?
+I feel fairly confident about these predictions, given that the model from question two from this section seemed appropriate, and the regression points were acceptable. 
+```{r}
+predict20 <- predict(reg, newdata = pyth[41:60, ])
+predict20
+```
+
+After doing this exercise, take a look at Gelman and Nolan (2002, section 9.4) to see where these data came from. (or ask Masanao)
+
+### Earning and height
+Suppose that, for a certain population, we can predict log earnings from log height as follows:
+
+- A person who is 66 inches tall is predicted to have earnings of $30,000.
+- Every increase of 1% in height corresponds to a predicted increase of 0.8% in earnings.
+- The earnings of approximately 95% of people fall within a factor of 1.1 of predicted values.
+
+1. Give the equation of the regression line and the residual standard deviation of the regression.
+log(earnings) = intercept + (earnings percentage increase/height percent increase)*log(height)
+log(30000)= intercept + (0.008/0.01)*log(66)
+```{r}
+intercept <- log(30000) - (0.008/0.01)*log(66)
+intercept
+```
+#equation is : log(earnings)= 6.957 + (0.008/0.01)*log(height)
+2. Suppose the standard deviation of log heights is 5% in this population. What, then, is the $R^2$ of the regression model described here?
+
+### Beauty and student evaluation 
+
+The folder beauty contains data from Hamermesh and Parker (2005) on student evaluations of instructors' beauty and teaching quality for several courses at the University of Texas. The teaching evaluations were conducted at the end of the semester, and the beauty judgments were made later, by six students who had not attended the classes and were not aware of the course evaluations.
+```{r}
+beauty.data <- read.table (paste0(gelman_example_dir,"beauty/ProfEvaltnsBeautyPublic.csv"), header=T, sep=",")
+```
+
+1. Run a regression using beauty (the variable btystdave) to predict course evaluations (courseevaluation), controlling for various other inputs. Display the fitted model graphically, and explaining the meaning of each of the coefficients, along with the residual standard deviation. Plot the residuals versus fitted values.
+
+The coefficient btystdave represents the beauty score given to a given professor, and it is the coefficient with the highest valued estimate, indicating that it is the biggest contributer to the professors overall evaluation score. The coefficient for age is quite small, indicating that it does not have a large influence over the evaluation score. Students, indicating the number of students a professor has, is a negative number, indicating that for every additional student a professor has, their evaluation score will decrease by 0.00015. However, the estimate for students is very small, some may consider it negligable. The residual standard deviation, as shown on the Normal Q-Q plot, is not normal, indicating that inferences from the model are not necessairly reliable. The residual standard deviation, 0.55, indicates that the linear model can predict the course evaluation of a professor with the given inputs with an accuracy of 55 points, if the professor is scored out of 100. This is not a good indicator that the model works well. 
+```{r}
+beauty.reg <- lm(courseevaluation ~ btystdave + age+ students, data=beauty.data)
+summary(beauty.reg)
+sigma(beauty.reg)
+plot(beauty.reg)
+
+```
+
+2. Fit some other models, including beauty and also other input variables. Consider at least one model with interactions. For each model, state what the predictors are, and what the inputs are, and explain the meaning of each of its coefficients.
+
+For beauty.reg2, the inputs are btystdave and female, and the predictor is btysdave*female. The intercept for this model indicates the extimated score if the person scored a 0 for btystdave, and were male. The estimate for btystdave, indicates the increase in the evaluation score for an increase in beauty. The estimate for female, -0.2051, indicates that being a female reduces the evaluation score. The interaction between the two inputs indicates that being female still has a negative impact on the score, but is lessened if the person scored higher on the beauty scale. 
+
+For beauty.reg3, the inputs are btystdave, female, age, the number of students in the class, and if the participant is on the tenure track. The predictors are btystdave*female, age, students, and tenure track. The intercept is the predicted score if all other predictors were zero. It is interesting that the intercept is not that much larger than that of beauty.reg2, considering the increase in predictors. The estimate for btystdave, indicates the increase in the evaluation score for an increase in beauty.The estimate for female indicates that being a female reduces the evaluation score. The age, students, and tenuretrack coefficient indicates the change in the score if their respective predictors increase by one. The interaction between the female and btystdave indicates that being female still has a negative impact on the score, but is lessened if the person scored higher on the beauty scale, and has been lessened by including predictors in the model. The fact that all of the coefficients, except beauty, are negative indicate that beauty is the only input that has a positive effect on a persons score. 
+
+```{r}
+beauty.reg2 <- lm(courseevaluation ~ btystdave*female, data=beauty.data)
+beauty.reg3 <- lm(courseevaluation~ btystdave*female + age+ students+ tenuretrack, data=beauty.data)
+summary(beauty.reg2)
+summary(beauty.reg3)
+plot(beauty.reg2)
+plot(beauty.reg3)
+```
+
+See also Felton, Mitchell, and Stinson (2003) for more on this topic 
+[link](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=426763)
+
+# Conceptula excercises
+
+### On statistical significance.
+
+Note: This is more like a demo to show you that you can get statistically significant result just by random chance. We haven't talked about the significance of the coefficient so we will follow Gelman and use the approximate definition, which is if the estimate is more than 2 sd away from 0 or equivalently, if the z score is bigger than 2 as being "significant".
+
+ ( From Gelman 3.3 ) In this exercise you will simulate two variables that are statistically independent of each other to see what happens when we run a regression of one on the other.  
+
+1. First generate 1000 data points from a normal distribution with mean 0 and standard deviation 1 by typing in R. Generate another variable in the same way (call it var2).
+
+```{r, eval=FALSE}
+var1 <- rnorm(1000,0,1)
+var2 <- rnorm(1000,0,1)
+```
+
+Run a regression of one variable on the other. Is the slope coefficient statistically significant? [absolute value of the z-score(the estimated coefficient of var1 divided by its standard error) exceeds 2]
+
+No, the slope of the coefficient is not statistically significant as the absolute value of the z-score does not exceed 2
+
+```{r, eval=FALSE}
+fit  <- lm (var2 ~ var1)
+z.scores <- coef(fit)[2]/se.coef(fit)[2]
+z.scores
+
+```
+
+2. Now run a simulation repeating this process 100 times. This can be done using a loop. From each simulation, save the z-score (the estimated coefficient of var1 divided by its standard error). If the absolute value of the z-score exceeds 2, the estimate is statistically significant. Here is code to perform the simulation:
+
+```{r, eval=FALSE}
+z.scores <- rep (NA, 100) 
+for (k in 1:100) {
+  var1 <- rnorm (1000,0,1)
+  var2 <- rnorm (1000,0,1)
+  fit  <- lm (var2 ~ var1)
+  z.scores[k] <- coef(fit)[2]/se.coef(fit)[2]
+}
+sum(z.scores <= -2)#Number of zscores less than or equal to -2
+sum(z.scores >= 2)#Number of zscores greater than or equal to 2
+```
+How many of these 100 z-scores are statistically significant? 
+What can you say about statistical significance of regression coefficient?
+
+I ran the simulation a few times and got either one or two statistically significant z scores. This past time I ran it, I got two. This indicates that even though the variables are of the same form (same distribution, mean, and variance), they are independent of eachother. 
+
+### Fit regression removing the effect of other variables
+
+Consider the general multiple-regression equation
+$$Y=A+B_1 X_1 + B_2 X_2 +\cdots + B_kX_k+E$$
+An alternative procedure for calculating the least-squares coefficient $B_1$ is as follows:
+
+1. Regress $Y$ on $X_2$ through $X_k$, obtaining residuals $E_{Y|2,\dots,k}$.
+2. Regress $X_1$ on $X_2$ through $X_k$, obtaining residuals $E_{1|2,\dots,k}$.
+3. Regress the residuals $E_{Y|2,\dots,k}$ on the residuals $E_{1|2,\dots,k}$.  The slope for this simple regression is the multiple-regression slope for $X_1$ that is, $B_1$.
+
+(a)  Apply this procedure to the multiple regression of prestige on education, income, and percentage of women in the Canadian occupational prestige data (http://socserv.socsci.mcmaster.ca/jfox/Books/Applied-Regression-3E/datasets/Prestige.pdf), confirming that the coefficient for education is properly recovered.
+
+```{r}
+fox_data_dir<-"http://socserv.socsci.mcmaster.ca/jfox/Books/Applied-Regression-3E/datasets/"
+Prestige<-read.table(paste0(fox_data_dir,"Prestige.txt"))
+
+```
+(b) The intercept for the simple regression in step 3 is 0.  Why is this the case?
+
+(c) In light of this procedure, is it reasonable to describe $B_1$ as the "effect of $X_1$ on $Y$ when the influence of $X_2,\cdots,X_k$ is removed from both $X_1$ and $Y$"?
+
+(d) The procedure in this problem reduces the multiple regression to a series of simple regressions ( in Step 3). Can you see any practical application for this procedure?
+
+### Partial correlation 
+
+The partial correlation between $X_1$ and $Y$ "controlling for" $X_2,\cdots,X_k$ is defined as the simple correlation between the residuals $E_{Y|2,\dots,k}$ and $E_{1|2,\dots,k}$, given in the previous exercise. The partial correlation is denoted $r_{y1|2,\dots, k}$.
+
+1. Using the Canadian occupational prestige data, calculate the partial correlation between prestige and education, controlling for income and percentage women.
+
+```{r}
+
+```
+
+2. In light of the interpretation of a partial regression coefficient developed in the previous exercise, why is $r_{y1|2,\dots, k}=0$ if and only if $B_1$ is 0?
+
+## Mathematical exercises.
+
+Prove that the least-squares fit in simple-regression analysis has the following properties:
+
+1. $\sum \hat{y}_i\hat{e}_i =0$
+
+2. $\sum (y_i-\hat{y}_i)(\hat{y}_i-\bar{y}) =\sum \hat{e}_i (\hat{y}_i-\bar{y})=0$
+
+Suppose that the means and standard deviations of $\mat{y}$ and  $\mat{x}$ are the same:  $\bar{\mat{y}}=\bar{\mat{x}}$ and $sd(\mat{y})=sd(\mat{x})$.
+
+1. Show that, under these circumstances 
+$$\beta_{y|x}=\beta_{x|y}=r_{xy}$$
+where $\beta_{y|x}$ is the least-squares slope for the simple regression of $\mat{y}$ on $\mat{x}$, $\beta_{x|y}$ is the least-squares slope for the simple regression of $\mat{x}$ on $\mat{y}$, and $r_{xy}$ is the correlation between the two variables. Show that the intercepts are also the same, $\alpha_{y|x}=\alpha_{x|y}$.
+
+2. Why, if $\alpha_{y|x}=\alpha_{x|y}$ and $\beta_{y|x}=\beta_{x|y}$, is the least squares line for the regression of $\mat{y}$  on $\mat{x}$ different from the line for the regression of $\mat{x}$ on $\mat{y}$ (when $r_{xy}<1$)?
+
+3. Imagine that educational researchers wish to assess the efficacy of a new program to improve the reading performance of children. To test the program, they recruit a group of children who are reading substantially vbelow grade level; after a year in the program, the researchers observe that the children, on average, have imporved their reading performance.  Why is this a weak research design?  How could it be improved?
+
+# Feedback comments etc.
+
+If you have any comments about the homework, or the class, please write your feedback here.  We love to hear your opnions.
+
